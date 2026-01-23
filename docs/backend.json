@@ -1,0 +1,182 @@
+{
+  "entities": {
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user of the TutorAI Landing app.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the user."
+        },
+        "email": {
+          "type": "string",
+          "description": "Email address of the user.",
+          "format": "email"
+        },
+        "displayName": {
+          "type": "string",
+          "description": "The name displayed to other users."
+        },
+        "signUpDate": {
+          "type": "string",
+          "description": "The date and time the user signed up.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "email",
+        "displayName",
+        "signUpDate"
+      ]
+    },
+    "PersonalizationRecommendation": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "PersonalizationRecommendation",
+      "type": "object",
+      "description": "Stores AI personalization recommendations for a user.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the personalization recommendation."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the User. (Relationship: User 1:N PersonalizationRecommendation)"
+        },
+        "recommendedFeatures": {
+          "type": "array",
+          "description": "Array of recommended AI tutor features based on demo performance.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "analysisDate": {
+          "type": "string",
+          "description": "The date the user completed the AI demo.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "recommendedFeatures",
+        "analysisDate"
+      ]
+    },
+    "ChatMessage": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Chat Message",
+      "type": "object",
+      "description": "Represents a single message in a chat conversation.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the message."
+        },
+        "userId": {
+          "type": "string",
+          "description": "The ID of the user who this message belongs to."
+        },
+        "tutor": {
+          "type": "string",
+          "description": "The name of the tutor for this conversation (e.g., 'python')."
+        },
+        "role": {
+          "type": "string",
+          "enum": [
+            "user",
+            "model"
+          ],
+          "description": "The role of the sender (user or AI model)."
+        },
+        "content": {
+          "type": "string",
+          "description": "The text content of the message."
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "The time the message was sent.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "tutor",
+        "role",
+        "content",
+        "timestamp"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores user profile data.  The 'userId' parameter matches the Firebase Authentication UID, ensuring straightforward ownership.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The Firebase Authentication UID of the user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/personalizationRecommendations/{recommendationId}",
+        "definition": {
+          "entityName": "PersonalizationRecommendation",
+          "schema": {
+            "$ref": "#/backend/entities/PersonalizationRecommendation"
+          },
+          "description": "Stores AI personalization recommendations for a specific user. The 'userId' parameter ensures that recommendations are scoped to the user.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The Firebase Authentication UID of the user."
+            },
+            {
+              "name": "recommendationId",
+              "description": "The unique ID of the personalization recommendation."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/messages/{messageId}",
+        "definition": {
+          "entityName": "ChatMessage",
+          "schema": {
+            "$ref": "#/backend/entities/ChatMessage"
+          },
+          "description": "Stores chat history for a specific user, segregated by user ID. The `userId` parameter ensures messages are scoped to the user.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The Firebase Authentication UID of the user."
+            },
+            {
+              "name": "messageId",
+              "description": "The unique ID of the chat message."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "This Firestore data structure is designed to support the TutorAI Landing app, focusing on user management, AI personalization, and chat history. It leverages path-based ownership for user data and ensures authorization independence by avoiding `get()` calls in security rules. The structure also follows the principle of segregation by placing user-specific data in dedicated subcollections. This design facilitates secure and scalable user authentication, personalized feature recommendations, and persistent chat conversations.\n\nSpecifically, user profiles are stored under `/users/{userId}`, where `userId` corresponds to the Firebase Authentication UID. AI Personalization Recommendations are stored in `/users/{userId}/personalizationRecommendations/{recommendationId}`, and chat messages are stored in the `/users/{userId}/messages/{messageId}` subcollection. This structure ensures that all user-generated content is directly associated with a user, simplifying ownership-based security rules.\n\nThis structure supports QAPs because listing recommendations and messages is always scoped to the user, meaning rules do not need to filter data across multiple users, simplifying the list operation and authorization independence. By using the userId as a path parameter, it's possible to have simple and secure security rules."
+  }
+}
